@@ -1,34 +1,36 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container max-w-3xl mx-auto p-8">
-    <h1 class="text-4xl font-bold mb-6">Order #{{ $order->id }} Berhasil Dibuat</h1>
+<div class="container max-w-4xl mx-auto p-8">
+    <h1 class="text-4xl mb-6 font-bold">Konfirmasi Order #{{ $order->id }}</h1>
 
-    @if(session('success'))
-        <div class="mb-4 p-4 bg-green-100 text-green-700 rounded">
-            {{ session('success') }}
-        </div>
-    @endif
+    <p>Status: <strong>{{ ucfirst($order->status) }}</strong></p>
+    <p>Total Harga: Rp{{ number_format($order->total_price, 0, ',', '.') }}</p>
+    <p>Metode Pembayaran: {{ $order->payment_method ?? 'Belum ditentukan' }}</p>
 
-    <p>Status Order: <strong>{{ ucfirst($order->status) }}</strong></p>
-    <p>Total Harga: <strong>Rp{{ number_format($order->total_price, 0, ',', '.') }}</strong></p>
-    <p>Waktu Pesanan: {{ $order->created_at->format('d M Y, H:i') }}</p>
+    <h2 class="mt-6 mb-4 text-2xl font-semibold">Detail Produk</h2>
 
-    <hr class="my-6">
+    <table class="w-full mb-6 border border-gray-200 rounded">
+        <thead>
+            <tr class="bg-gray-100 text-left">
+                <th class="p-4">Produk</th>
+                <th class="p-4 text-center">Jumlah</th>
+                <th class="p-4 text-right">Harga</th>
+                <th class="p-4 text-right">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($order->orderDetails as $detail)
+            <tr>
+                <td class="p-4">{{ $detail->product->name }}</td>
+                <td class="p-4 text-center">{{ $detail->quantity }}</td>
+                <td class="p-4 text-right">Rp{{ number_format($detail->price, 0, ',', '.') }}</td>
+                <td class="p-4 text-right">Rp{{ number_format($detail->price * $detail->quantity, 0, ',', '.') }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
 
-    <h2 class="text-2xl font-semibold mb-4">Detail Produk</h2>
-    <ul>
-        @foreach($order->orderDetails as $detail)
-            <li>
-                {{ $detail->product->name }} - Jumlah: {{ $detail->quantity }} - Harga per item: Rp{{ number_format($detail->price, 0, ',', '.') }}
-            </li>
-        @endforeach
-    </ul>
-
-    <div class="mt-8">
-        <a href="{{ route('home') }}" class="bg-blue-600 text-white px-5 py-3 rounded hover:bg-blue-700">
-            Kembali ke Beranda
-        </a>
-    </div>
+    <a href="{{ route('dashboard') }}" class="text-blue-600 hover:underline">Kembali ke Dashboard</a>
 </div>
 @endsection

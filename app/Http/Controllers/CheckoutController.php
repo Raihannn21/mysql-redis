@@ -20,13 +20,20 @@ class CheckoutController extends Controller
 
         $products = [];
         $total = 0;
-        foreach ($cartItems as $productId => $quantity) {
-            $product = Product::find($productId);
-            if ($product) {
-                $product->quantity = $quantity;
-                $product->subtotal = $product->price * $quantity;
-                $total += $product->subtotal;
-                $products[] = $product;
+
+        if ($cartItems) {
+            // Ambil semua produk sekaligus supaya tidak query berulang
+            $productIds = array_keys($cartItems);
+            $dbProducts = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+            foreach ($cartItems as $productId => $quantity) {
+                if (isset($dbProducts[$productId])) {
+                    $product = $dbProducts[$productId];
+                    $product->quantity = $quantity;
+                    $product->subtotal = $product->price * $quantity;
+                    $total += $product->subtotal;
+                    $products[] = $product;
+                }
             }
         }
 
@@ -50,44 +57,60 @@ class CheckoutController extends Controller
         DB::beginTransaction();
 
         try {
+            // Ambil produk dari DB sekaligus
+            $productIds = array_keys($cartItems);
+            $dbProducts = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
             $total = 0;
+
+            // Cek stok dan hitung total
             foreach ($cartItems as $productId => $quantity) {
-                $product = Product::find($productId);
-                if (!$product || $product->stock < $quantity) {
-                    return redirect()->route('checkout.index')->with('error', 'Stok produk tidak cukup.');
+                if (!isset($dbProducts[$productId])) {
+                    throw new \Exception('Produk tidak ditemukan.');
+                }
+                $product = $dbProducts[$productId];
+                if ($product->stock < $quantity) {
+                    throw new \Exception("Stok produk '{$product->name}' tidak cukup.");
                 }
                 $total += $product->price * $quantity;
             }
 
+            // Buat order dengan payment_method
             $order = Order::create([
                 'user_id' => $userId,
                 'total_price' => $total,
                 'status' => 'pending',
-                // tambahkan 'payment_method' kalau kamu punya kolom ini di DB
+                'payment_method' => $request->payment_method,
             ]);
 
+            // Buat detail order dan kurangi stok
             foreach ($cartItems as $productId => $quantity) {
-                $product = Product::find($productId);
+                $product = $dbProducts[$productId];
                 OrderDetail::create([
                     'order_id' => $order->id,
                     'product_id' => $product->id,
                     'quantity' => $quantity,
                     'price' => $product->price,
                 ]);
-                // Kurangi stok produk
+
                 $product->stock -= $quantity;
                 $product->save();
             }
 
-            // Kosongkan cart di Redis
+            // Kosongkan cart Redis
             Redis::del($cartKey);
 
             DB::commit();
 
-            return redirect()->route('order.confirmation', $order->id)->with('success', 'Order berhasil dibuat! Silakan lanjutkan pembayaran.');
+            return redirect()->route('order.confirmation', $order->id)
+                ->with('success', 'Order berhasil dibuat! Silakan lanjutkan pembayaran.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->route('checkout.index')->with('error', 'Terjadi kesalahan saat checkout.');
+
+            // Bisa disesuaikan untuk debugging:
+            // return redirect()->route('checkout.index')->with('error', $e->getMessage());
+            
+            return redirect()->route('checkout.index')->with('error', 'Terjadi kesalahan saat checkout: ' . $e->getMessage());
         }
     }
 }
