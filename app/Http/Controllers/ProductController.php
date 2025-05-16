@@ -41,7 +41,8 @@ class ProductController extends Controller
 
     public function show(string $id)
     {
-        // opsional: bisa diisi jika ingin menampilkan detail produk
+        $product = Product::findOrFail($id);
+        return view('products.show', compact('product'));
     }
 
     public function edit(Product $product)
