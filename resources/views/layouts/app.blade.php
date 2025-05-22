@@ -59,12 +59,6 @@
                         Keranjang
                     </a>
                 </li>
-                <li>
-                    <a href="{{ route('checkout.index') }}" class="flex items-center px-4 py-2 rounded hover:bg-indigo-100 {{ request()->routeIs('checkout.index') ? 'bg-indigo-100 font-semibold' : '' }}">
-                        <svg class="w-6 h-6 mr-3 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 12v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Checkout
-                    </a>
-                </li>
             </ul>
         </nav>
 
